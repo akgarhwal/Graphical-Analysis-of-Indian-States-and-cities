@@ -1,3 +1,3 @@
 # Graphical-Analysis-of-Indian-States-and-cities
 
-To Sew Graphical Data Download this repo and open html file.
+To view Report <a href="https://akgarhwal.github.io/Graphical-Analysis-of-Indian-States-and-cities">Graphical-Analysis-of-Indian-States-and-cities</a>
