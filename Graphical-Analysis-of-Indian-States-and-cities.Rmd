@@ -1,0 +1,393 @@
+---
+title: "Analysis of Indian States and cities"
+author: "Abhinesh"
+date: "07 May 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(highcharter)
+```
+```{r  echo=FALSE, message=FALSE, warning=FALSE}
+india=read.csv("CSV/cities_r2.csv");
+library(leaflet)
+library(dplyr)
+mapIndia <- leaflet() %>% 
+  addTiles('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+           attribution='Map by  AKGARHWAL') %>%
+  setView(80, 25, zoom= 4)
+
+mapObj = mapIndia %>% addCircles (data=india, lat= india$latitude, lng  = india$longitude, 
+                 popup=paste(
+  "<strong>City : </strong>", india$name_of_city,
+  "<br><strong>State : </strong>", india$state_name,
+  "<br><strong>Total Population : </strong>", india$population_total,
+  "<br><strong>Child Population : </strong>", india$X0.6_population_total,
+  "<br><strong>Literacy Rate : </strong>", india$effective_literacy_rate_total,
+  "<br><strong>Total Literate : </strong>", india$total_graduates,
+   "<br><strong>Sex ratio : </strong>", india$sex_ratio),
+                            
+  weight = ifelse(india$population_total < 500000, 3,ifelse(india$population_total < 1000000, 7,ifelse(india$population_total >= 1000000, 12,20))), 
+   color= ifelse(india$population_total < 500000, "dodgerblue",ifelse(india$population_total < 1000000, "lawngreen",ifelse(india$population_total >= 1000000, "red","#FF0000"))), 
+   stroke = TRUE, fillOpacity = 0.6)
+```
+```{r}
+#Diaplay Map of India with top 500 City
+mapObj
+```
+
+## 1. Population Analysis
+**1.A** Rural and Urban Population Comparison
+```{r echo=FALSE}
+#Read from File
+fileObj = read.csv("CSV/State_Population.csv")
+#Now draw graph using highcharter library
+
+```
+```{r echo=FALSE}
+states = fileObj$State
+population = fileObj$Population
+#Convert to Data frame
+data = data.frame(states,population)
+#Draw Graph
+```
+```{r}
+hchart(data,"bar",hcaes(x=states,y = population),name="population",colorByPoint = TRUE) %>% hc_title(text = "State by Total Population.")
+```
+```{r}
+Graph <- highchart() %>% 
+  hc_xAxis(categories = fileObj$State ) %>% 
+  hc_add_series(name = "Total Population", data = fileObj$Population ) %>% 
+  hc_add_series(name = "Rural Population", data = fileObj$Rural.Population) %>% 
+  hc_add_series(name = "Urban Population", data = fileObj$Urban.Population) %>% 
+  hc_title(text="Comparision of Population of States") 
+Graph
+```
+
+
+
+**Analysis**<br>
+From above graph we conclude that <br>
+(1)State With maximum population : Uttar Pradesh<br>
+State with minimum population : Sikkim<br>
+
+(2)Sate with maximum  rural population : Uttar Pradesh<br>
+Sate with minimum  rural population : Sikkim<br>
+
+(3)Sate with maximum  urban population : Maharashtra<br>
+Sate with minimum  urban population : Sikkim<br>
+
+(4)Sikkim has least population in each 
+category.<br>
+
+(5)State with less rural populatio than urban population : <br>
+```{r echo=FALSE}
+#Make data frame
+data = data.frame(fileObj$State,fileObj$Rural.Population,fileObj$Urban.Population)
+#Print list of state which has less rural population then urban population 
+```
+```{r}
+subset(data,fileObj.Rural.Population < fileObj.Urban.Population)
+```
+
+**1.B** Now calculate population of each state from top 500 cities only<br>
+```{r echo = FALSE}
+#Read from File
+citys=read.csv("CSV/cities_r2.csv")
+
+#Stroe name of states
+states=unique(citys$state_name)
+total=0
+male=0
+female=0
+for (i in 1:length(states)) {
+  total[i]=0
+  male[i]=0
+  female[i]=0
+  for (j in 1:length(citys$state_name)) {
+    if(identical(as.character(states[i]),as.character(citys$state_name[j]))){
+      male[i]=male[i]+as.integer(citys$population_male[j])
+      total[i]=total[i]+as.integer(citys$population_total[j])
+      female[i]=female[i]+as.integer(citys$population_female[j])
+    }
+  }
+}
+
+#Convert to data Frames
+data =data.frame(male,female,total,states)
+#Draw graph
+```
+```{r }
+hc <- highchart() %>% 
+  hc_chart(type = "column") %>% 
+  hc_xAxis(categories = data$states) %>% 
+  hc_add_series(name = "Male", data = data$male) %>% 
+  hc_add_series(name = "Female", data = data$female) %>% 
+  hc_add_series(name = "Total", data = data$total) %>% 
+  hc_title(text="Comparision of Male and Female Urban Population")
+hc
+```
+Now some intersting fact from graph<br>
+**Note** The below data is valid if we choose top 500 cities of India.<br>
+(i) Maharashtra has maximum urban population.<br>
+(ii) Maharashtra also has maximum male and female urban population.<br>
+(iii) State who has more female population than male population.<br>
+```{r}
+subset(data,male < female)
+```
+**Union territory Puducherry** also has more female population then male population.<br>
+(iv) State which do not have any top 500 cities<br>
+(a)Meghalaya<br>
+(b)Goa<br>
+(c)Arunachal Pradesh<br>
+(d)Sikkim<br>
+
+**1.C** Top 10 City with highest Population
+```{r}
+#Read from file
+Data = read.csv("~/Documents/R-Project/CSV/cities_r2.csv")
+#Sort according to total population
+data <- Data[with(Data,order(-population_total)),]
+#find top 10 city
+topCity = data[1:10,]
+hc = hchart(topCity,"column",hcaes(x=name_of_city,y =population_total),name="total population",colorByPoint = TRUE) %>% hc_title(text = "Top 10 City by Total Population.") %>%
+    hc_add_theme(hc_theme_monokai() )
+hc
+```
+**1.D** Top 10 City with highest Male Population
+```{r}
+#Sort according to male population
+data <- Data[with(Data,order(-population_male)),]
+#find top 10 city
+topCity = data[1:10,]
+hc = hchart(topCity,"funnel",hcaes(x=name_of_city,y =population_male),name="male population",colorByPoint = TRUE) %>% hc_title(text = "Top 10 City by Male Population.")
+hc
+```
+**1.E** Top 10 City with highest Female Population
+```{r}
+#Sort according to female population
+data <- Data[with(Data,order(-population_female)),]
+#find top 10 city
+topCity = data[1:10,]
+hc = hchart(topCity,"pyramid",hcaes(x=name_of_city,y =population_female),name="female population",colorByPoint = TRUE) %>% hc_title(text = "Top 10 City by female Population.")
+hc
+```
+**1.F** Top 10 City with highest Child[0-6 age] Population
+```{r}
+#Sort according to 0-6 age population
+data <- Data[with(Data,order(-X0.6_population_total)),]
+#find top 10 city
+topCity = data[1:10,]
+hc = hchart(topCity,"pie",hcaes(x=name_of_city,y =X0.6_population_total),name="child[0-6 age] population",colorByPoint = TRUE) %>% hc_title(text = "Top 10 City by child Population.") 
+hc
+```
+**1.G** Comparision of Top 10 City : 
+```{r}
+data <- Data[with(Data,order(-population_total)),]
+topCity = data[1:10,]
+hc <- highchart() %>% 
+  hc_chart(type = "column") %>% 
+  hc_xAxis(categories = topCity$name_of_city) %>% 
+  hc_add_series(name = "Total population", data = topCity$population_total) %>% 
+  hc_add_series(name = "Male population", data = topCity$population_male) %>% 
+  hc_add_series(name = "Female population", data = topCity$population_female) %>% 
+  hc_add_series(name = "Child population", data = topCity$X0.6_population_total) %>% 
+  hc_title(text="Comparision of Top 10 City")
+hc
+```
+
+
+## 2. Literacy Rate Analysis
+**2.A** Indan State and Union territory by Literac rate
+```{r echo =FALSE}
+#Read from file
+fileObj = read.csv("CSV/Literacy rate.csv")
+#get data
+states = fileObj$State
+rate =  fileObj$Literacy_Rate_2011
+#Convert to Data frame
+data = data.frame(states,rate)
+#Draw Graph
+```
+```{r}
+hchart(data,"",hcaes(x=states,y = rate),name="Literacy rate 2011",colorByPoint = TRUE) %>% hc_title(text = "State and Union territory by Literacy rate 2011.")
+```
+**2.B**Comparison of Indan State and Union territory by Literac rate
+```{r}
+#Now draw graph using highcharter library
+highchart() %>% 
+  hc_xAxis(categories = fileObj$State ) %>% 
+  hc_chart(type = "column") %>% 
+  hc_add_series(name = "Total Literacy Rate", data = fileObj$Literacy_Rate_2011 ) %>% 
+  hc_add_series(name = "Male Literacy Rate", data = fileObj$Male_Literacy_Rate_2011) %>% 
+  hc_add_series(name = "Female Literacy Rate", data = fileObj$Female_Literacy_Rate_2011) %>% hc_title(text="Comparision of States and union terryterry by literacy rate.") 
+```
+
+Analysis from above graph <br>
+(i) Kerala has Highest Litaracy Rate = 93.91 % <br>
+(ii) Lakshadweep has Highest male literacy rate = 96.11% <br>
+(iii) Kerala has Highest Female literacy rate = 91.98% <br>
+(iv)Top 10 State according to difference between Male and Female Literacy rate <br>
+```{r echo=FALSE}
+#Read from File
+Data = read.csv("CSV/Literacy rate.csv")
+#Sort according to difference
+data=Data[with(Data,order(-(Male_Literacy_Rate_2011 -Female_Literacy_Rate_2011 ))),]
+#Select top 10
+data = data[1:10,]
+```
+```{r}
+#Draw graph
+hchart(data,"column",hcaes(x=State,y = (Male_Literacy_Rate_2011 -Female_Literacy_Rate_2011 )),name="Difference B/w male and female Literacy rate 2011",colorByPoint = TRUE) %>%
+  hc_title(text = "Top 10 State according to difference between Male and Female Literacy rate")
+```
+
+**2.C**Top 10 City by Literacy rate
+```{r}
+#Read from file
+Data = read.csv("CSV/cities_r2.csv")
+##Sort according to literacy rate
+data <- Data[with(Data,order(-effective_literacy_rate_total)),]
+#find top 10 city
+topCity = data[1:10,]
+highchart() %>% 
+  hc_xAxis(categories = topCity$name_of_city ) %>% 
+  hc_chart(type = "column") %>% 
+  hc_add_series(name = "Total Literacy Rate", data = topCity$effective_literacy_rate_total ) %>% 
+  hc_add_series(name = "Male Literacy Rate", data = topCity$effective_literacy_rate_male) %>% 
+  hc_add_series(name = "Female Literacy Rate", data = topCity$effective_literacy_rate_female) %>% hc_title(text="Comparision of top 10 city by literacy rate.")
+```
+Analysis from Graph : <br>
+(i) Aizawl(Mizoram) has highest Literacy rate = 98.80 <br>
+(ii) Aizawl(Mizoram) has highest Male Literacy rate = 99.30 <br>
+(iii) Aizawl(Mizoram) has highest Female Literacy rate =98.30 <br>
+
+
+
+##3. Sex Ratio Analysis
+**2.A** Indan State and Union territory by Sex ratio
+```{r echo= FALSE}
+#Read from file
+fileObj = read.csv("CSV/SexRatio.csv")
+#get data
+states = fileObj$State
+ratio =  fileObj$SexRatio
+#Convert to Data frame
+data = data.frame(states,ratio)
+#Draw Graph
+```
+```{r}
+hchart(data,"column",hcaes(x=states,y = ratio),name="Sex Ratio 2011",colorByPoint = TRUE) %>% 
+  hc_title(text = "State and Union territory by Sex Ratio 2011.") %>%
+  hc_add_theme(hc_theme_chalk())
+```
+
+(1) State having sex ratio more than 1000: <br>
+  (a) Kerala 1084 <br>
+  (b) Puducherry 1037 <br>
+  
+**3.B** Change in Sex ratio from 2001 to 2011
+```{r echo = FALSE}
+fileObj = read.csv("CSV/SexRatio.csv")
+#get data
+states = fileObj$State
+change =  fileObj$Increase
+#Convert to Data frame
+data = data.frame(states,change)
+```
+
+```{r}
+hchart(data,"column",hcaes(x=states,y = change),name="Sex Ratio 2011",colorByPoint = TRUE) %>% 
+  hc_title(text = "State and Union territory by Change Percentage from 2001 to 2011.") %>%
+  hc_add_theme(hc_theme_google())
+```
+(1). Sex ratio of Delhi Increased by 47 (maximum)<br>
+(2). Sex ratio of Dadra and Nagar Haveli decreased by 38 <br>
+(3). States whose Sex ratio Decreased : <br>
+  (a)Bihar (-1)<br>
+  (b)Gujarat (-1)<br>
+  (c)Jammu and Kasmir (-3)<br>
+  (4) Dadra and Nagar Haveli (-38)<br>
+
+
+**3.C** Top 10 City according Sex ratio<br>
+```{r}
+
+#Read from file
+Data = read.csv("~/Documents/R-Project/CSV/cities_r2.csv")
+#Sort according to total population
+data <- Data[with(Data,order(-sex_ratio)),]
+#find top 10 city
+topCity = data[1:10,]
+hc = hchart(topCity,"pie",hcaes(x=name_of_city,y =sex_ratio),name="Sex ratio",colorByPoint = TRUE) %>% hc_title(text = "Top 10 City by Sex ratio.") %>%
+  hc_add_theme(hc_theme_db())
+
+hc
+```
+
+
+##4. Graduate Analysis
+
+**4.A** Indian State by no of graduate
+NOTE : Number of Graduate of state only from top 500 city.
+```{r echo= FALSE}
+#Read from File
+citys=read.csv("CSV/cities_r2.csv")
+
+#Stroe name of states
+states=unique(citys$state_name)
+total=0
+male=0
+female=0
+for (i in 1:length(states)) {
+  total[i]=0
+  male[i]=0
+  female[i]=0
+  for (j in 1:length(citys$state_name)) {
+    if(identical(as.character(states[i]),as.character(citys$state_name[j]))){
+      male[i]=male[i]+as.integer(citys$male_graduates[j])
+      total[i]=total[i]+as.integer(citys$total_graduates[j])
+      female[i]=female[i]+as.integer(citys$female_graduates[j])
+    }
+  }
+}
+
+data =data.frame(male,female,total,states)
+
+```
+
+```{r}
+
+hc <- highchart() %>% 
+  hc_chart(type = "bar") %>% 
+  hc_xAxis(categories = data$states) %>% 
+  hc_add_series(name = "Total", data = data$total) %>% 
+  hc_title(text="State by Number of Graduate in 2015-16") %>%
+  hc_add_theme(hc_theme_handdrawn() )
+hc
+```
+
+**4.B** State by Umemployment Rate : 
+
+```{r echo = FALSE}
+fileObj = read.csv("CSV/Unemp.csv")
+#get data
+states = fileObj$State
+total =  fileObj$Total
+#Convert to Data frame
+data = data.frame(states,total)
+```
+
+```{r}
+hchart(data,"pyramid",hcaes(x=states,y = total),name="Unemployment rate : ",colorByPoint = TRUE) %>% 
+  hc_title(text = "Unemployment Rate of each state.") %>%
+  hc_add_theme(hc_theme_gridlight() )
+```
+
+(1) Gujarat has lowest unemployment rate in India(9)
+(2) Tripura has highest unemployment rate in India(197)
+
+<h1>  Thank You </h1>
+
+
